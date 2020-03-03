@@ -80,8 +80,6 @@ void __FUNC(els_pi_init)(__STRUCT(ElsPi) * const self, const __STRUCT(ElsPiInitP
     ELS_ASSERT(param->ka <= _IQ(_Q, 1.F));
     ELS_ASSERT(param->max > param->min);
 
-	/*----------------------------- 初始化 ------------------------------*/
-
 	/** public */
 	// input
 	self->ref = _IQ(_Q, 0.F);

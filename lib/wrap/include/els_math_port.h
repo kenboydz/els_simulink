@@ -7,8 +7,11 @@
 #include <limits.h>
 
 
-#define max(a, b)       ((a)>(b)?(a):(b))
-#define min(a, b)       ((a)<(b)?(a):(b))
+#define MAX(a, b)		            ( (a) > (b) ? (a) : (b) )
+#define MIN(a, b)		            ( (a) < (b) ? (a) : (b) )
+
+#define MAX_IN_3(a, b, c)		    ( MAX( MAX( (a), (b) ), (c) ) )
+#define MIN_IN_3(a, b, c)		    ( MIN( MIN( (a), (b) ), (c) ) )
 
 
 #define   FLOAT_MATH    0
@@ -132,6 +135,8 @@ typedef   int32_t       __iq_1;
 #define   __IQ_2(A)     (__iq_2) ((A) * 4.0L)
 #define   __IQ_1(A)     (__iq_1) ((A) * 2.0L)
 //---------------------------------------------------------------------------
+#define   _IQmod(N, A, B)   ((A) % (B))
+//---------------------------------------------------------------------------
 float __PC_IQtoF(const int32_t a, const int_fast8_t frac);
 
 #define   _IQtoF(N, A)      __IQtoF(N, A)
@@ -204,7 +209,7 @@ float __PC_FtoIQ(const float a, const int_fast8_t frac);
 #define   __FtoIQ_2(A)	    __PC_FtoIQ(A, 2)
 #define   __FtoIQ_1(A)	    __PC_FtoIQ(A, 1)
 //---------------------------------------------------------------------------
-#define   _IQsat(A, Pos, Neg)   max(min(A, Pos), Neg)
+#define   _IQsat(A, Pos, Neg)   (MAX(((MIN((A),(Pos)))),(Neg)))
 //---------------------------------------------------------------------------
 #define   _IQNtoM(A, N, M)      M > N ? ((int32_t) (A) << ( (M) - (N) ) ) : ((int32_t) (A) >> ( (N) - (M) ) )
 //---------------------------------------------------------------------------
@@ -1254,13 +1259,15 @@ int32_t __PC_IQlog(int32_t a, int_fast8_t frac);
 // If FLOAT_MATH is used, the IQmath library function are replaced by
 // equivalent floating point operations:
 //===========================================================================
-#define   _iq(N)        float
+#define   _iq(N)            float
 //---------------------------------------------------------------------------
-#define   _IQ(N, A)     (A)
+#define   _IQ(N, A)         (A)
 //---------------------------------------------------------------------------
-#define   _IQtoF(N, A)  (A)
+#define   _IQmod(N, A, B)   (fmodf(A, B))
 //---------------------------------------------------------------------------
-#define   _FtoIQ(N, A)  (A)
+#define   _IQtoF(N, A)      (A)
+//---------------------------------------------------------------------------
+#define   _FtoIQ(N, A)      (A)
 //---------------------------------------------------------------------------
 //extern  float _satf(float A, float Pos, float Neg);
 //#define   _IQsat(A, Pos, Neg)    _satf(A, Pos, Neg)
