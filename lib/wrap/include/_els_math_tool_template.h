@@ -36,7 +36,7 @@ __FUNC(els_interpolate_2d)(const _iq(_Q) x1, const _iq(_Q) y1,
 }
 
 
-/**power invarient clarke transform and inverse
+/**power invariant clarke transform and inverse
  */
 static inline void
 __FUNC(els_clarke)(const _iq(_Q) u, const _iq(_Q) v, const _iq(_Q) w,
