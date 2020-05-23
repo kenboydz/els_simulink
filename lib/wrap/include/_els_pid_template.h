@@ -15,6 +15,116 @@
 #include "els_math.h"
 
 
+//=======================================simple pi======================================//
+
+#ifdef _DECLARE_CODE
+
+
+typedef struct __STRUCT(_ElsPi) {
+	/** public */
+  // input
+  _iq(_Q) ref;
+  _iq(_Q) fdb;
+  // output
+  _iq(_Q) out;
+
+	/** private */
+	// parameter
+  _iq(_Q) _kp;
+  _iq(_Q) _ki;
+  _iq(_Q) _ka;
+  _iq(_Q) _max;
+  _iq(_Q) _min;
+	// variable
+  _iq(_Q) _yi;
+} __STRUCT(ElsPi);
+
+//---------------------------------------------------------------------------------------------------//
+
+typedef struct {
+  _iq(_Q) kp;
+  _iq(_Q) ki;
+  _iq(_Q) ka;
+  _iq(_Q) max;
+  _iq(_Q) min;
+} __STRUCT(ElsPiInitParam);
+
+
+void __FUNC(els_pi_init)(
+  __STRUCT(ElsPi) * const self,
+  const __STRUCT(ElsPiInitParam) * const param
+);
+
+void __FUNC(els_pi_update)(__STRUCT(ElsPi) * const self);
+void __FUNC(els_pi_track)(__STRUCT(ElsPi) * const self);
+
+#endif  // _DECLARE_CODE
+
+
+#ifdef _DEFINE_CODE
+
+
+void __FUNC(els_pi_init)(__STRUCT(ElsPi) * const self, const __STRUCT(ElsPiInitParam) * const param) {
+	/** check */
+  ELS_ASSERT(param->kp >= _IQ(_Q, 0.F));
+  ELS_ASSERT(param->ki >= _IQ(_Q, 0.F));
+  ELS_ASSERT(param->ka >= _IQ(_Q, 0.F));
+  ELS_ASSERT(param->ka <= _IQ(_Q, 1.F));
+  ELS_ASSERT(param->max > param->min);
+
+	/** public */
+	// input
+	// output
+
+	/** private */
+	// parameter
+  self->_kp = param->kp;
+  self->_ki = param->ki;
+  self->_ka = param->ka;
+  self->_max = param->max;
+  self->_min = param->min;
+	// variable
+  self->_yi = _IQ(_Q, 0.F);
+
+	/** other */
+}
+
+
+void __FUNC(els_pi_update)(__STRUCT(ElsPi) * const self) {
+	// integrate
+	self->_yi += _IQmpy(_Q, self->_ki, self->ref - self->fdb);
+	// feedback calculate
+	self->out = _IQmpy(
+    _Q,
+		_IQmpy(_Q, self->_ka, self->ref) - self->fdb,
+		self->_kp
+	) + self->_yi;
+	// saturation
+  LIMIT_RANGE(self->out, self->_max, self->_min);
+}
+
+
+/**set ref, fdb, and out before call this function
+ */
+void __FUNC(els_pi_track)(__STRUCT(ElsPi) * const self) {
+	// saturation
+  LIMIT_RANGE(self->out, self->_max, self->_min);
+  // calculate yi
+  if (self->_ki != _IQ(_Q, 0.F)) {
+    const _iq(_Q) yp = _IQmpy(
+      _Q,
+      _IQmpy(_Q, self->_ka, self->ref) - self->fdb,
+      self->_kp
+    );
+    self->_yi = self->out - yp;
+  } else {
+    self->_yi = _IQ(_Q, 0.F);
+  }
+}
+
+
+#endif  // _DEFINE_CODE
+
 
 //=======================================back_calc pi======================================//
 
@@ -51,7 +161,6 @@ typedef struct {
   _iq(_Q) ka;
   _iq(_Q) max;
   _iq(_Q) min;
-  _iq(_Q) y0;
 } __STRUCT(ElsPiBackCalcInitParam);
 
 
@@ -61,14 +170,8 @@ void __FUNC(els_pi_back_calc_init)(
 );
 
 void __FUNC(els_pi_back_calc_update)(__STRUCT(ElsPiBackCalc) * const self);
+void __FUNC(els_pi_back_calc_track)(__STRUCT(ElsPiBackCalc) * const self);
 
-static inline void
-__FUNC(els_pi_back_calc_reset)(__STRUCT(ElsPiBackCalc) * const self, _iq(_Q) yi) {
-	self->ref = _IQ(_Q, 0.F);
-	self->fdb = _IQ(_Q, 0.F);
-	self->out = _IQdiv2(self->_max + self->_min);
-  self->_yi = yi;
-}
 
 #endif  // _DECLARE_CODE
 
@@ -87,10 +190,7 @@ void __FUNC(els_pi_back_calc_init)(__STRUCT(ElsPiBackCalc) * const self, const _
 
 	/** public */
 	// input
-  // self->ref;  // do in reset function
-  // self->fdb;  // do in reset function
-	/* output */
-  // self->out;  // do in reset function
+	// output
 
 	/** private */
 	// parameter
@@ -101,10 +201,9 @@ void __FUNC(els_pi_back_calc_init)(__STRUCT(ElsPiBackCalc) * const self, const _
   self->_max = param->max;
   self->_min = param->min;
 	// variable
-  // self->_yi;  // do in reset function
+  self->_yi = _IQ(_Q, 0.F);
 
 	/** other */
-  __FUNC(els_pi_back_calc_reset)(self, param->y0);
 }
 
 
@@ -121,6 +220,25 @@ void __FUNC(els_pi_back_calc_update)(__STRUCT(ElsPiBackCalc) * const self) {
 	// integrate
 	self->_yi += _IQmpy(_Q, self->_ki, self->ref - self->fdb)
 				        + _IQmpy(_Q, self->_kc, self->out - out_pre);
+}
+
+
+/**set ref, fdb, and out before call this function
+ */
+void __FUNC(els_pi_back_calc_track)(__STRUCT(ElsPiBackCalc) * const self) {
+	// saturation
+  LIMIT_RANGE(self->out, self->_max, self->_min);
+  // calculate yi
+  if (self->_ki != _IQ(_Q, 0.F)) {
+    const _iq(_Q) yp = _IQmpy(
+      _Q,
+      _IQmpy(_Q, self->_ka, self->ref) - self->fdb,
+      self->_kp
+    );
+    self->_yi = self->out - yp;
+  } else {
+    self->_yi = _IQ(_Q, 0.F);
+  }
 }
 
 
@@ -160,7 +278,6 @@ typedef struct {
   _iq(_Q) ka;
   _iq(_Q) max;
   _iq(_Q) min;
-  _iq(_Q) y0;
 } __STRUCT(ElsPiClampInitParam);
 
 
@@ -170,13 +287,21 @@ void __FUNC(els_pi_clamp_init)(
 );
 
 void __FUNC(els_pi_clamp_update)(__STRUCT(ElsPiClamp) * const self);
+void __FUNC(els_pi_clamp_track)(__STRUCT(ElsPiClamp) * const self);
 
 static inline void
-__FUNC(els_pi_clamp_reset)(__STRUCT(ElsPiClamp) * const self, _iq(_Q) yi) {
-	self->ref = _IQ(_Q, 0.F);
-	self->fdb = _IQ(_Q, 0.F);
-	self->out = _IQdiv2(self->_max + self->_min);
-  self->_yi = yi;
+__FUNC(els_pi_clamp_set_maxmin)(__STRUCT(ElsPiClamp) * const self, _iq(_Q) max, _iq(_Q) min) {
+  ELS_ASSERT(max > min);
+  self->_max = max;
+  self->_min = min;
+}
+
+static inline void
+__FUNC(els_pi_clamp_set_kpi)(__STRUCT(ElsPiClamp) * const self, _iq(_Q) kp, _iq(_Q) ki) {
+  ELS_ASSERT(kp >= _IQ(_Q, 0.F));
+  ELS_ASSERT(ki >= _IQ(_Q, 0.F));
+  self->_kp = kp;
+  self->_ki = ki;
 }
 
 #endif  // _DECLARE_CODE
@@ -195,10 +320,7 @@ void __FUNC(els_pi_clamp_init)(__STRUCT(ElsPiClamp) * const self, const __STRUCT
 
 	/** public */
 	// input
-  // self->ref;  // do in reset function
-  // self->fdb;  // do in reset function
-	/* output */
-  // self->out;  // do in reset function
+	// output
 
 	/** private */
 	// parameter
@@ -208,10 +330,9 @@ void __FUNC(els_pi_clamp_init)(__STRUCT(ElsPiClamp) * const self, const __STRUCT
   self->_max = param->max;
   self->_min = param->min;
 	// variable
-  // self->_yi;  // do in reset function
+  self->_yi = _IQ(_Q, 0.F);
 
 	/** other */
-  __FUNC(els_pi_clamp_reset)(self, param->y0);
 }
 
 
@@ -236,6 +357,25 @@ void __FUNC(els_pi_clamp_update)(__STRUCT(ElsPiClamp) * const self) {
     self->_yi += yi_delta;
     self->out = yp + self->_yi;
     LIMIT_RANGE(self->out, self->_max, self->_min);
+  }
+}
+
+
+/**set ref, fdb, and out before call this function
+ */
+void __FUNC(els_pi_clamp_track)(__STRUCT(ElsPiClamp) * const self) {
+	// saturation
+  LIMIT_RANGE(self->out, self->_max, self->_min);
+  // calculate yi
+  if (self->_ki != _IQ(_Q, 0.F)) {
+    const _iq(_Q) yp = _IQmpy(
+      _Q,
+      _IQmpy(_Q, self->_ka, self->ref) - self->fdb,
+      self->_kp
+    );
+    self->_yi = self->out - yp;
+  } else {
+    self->_yi = _IQ(_Q, 0.F);
   }
 }
 

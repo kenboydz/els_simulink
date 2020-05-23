@@ -11,6 +11,13 @@
 #include "_els_pid_template.h"
 
 
+// for idq control
+#define _DECLARE_CODE
+#define _Q          Q18
+#define _POSTFIX    _Q18
+#include "_els_pid_template.h"
+
+
 // for ppll
 #define _DECLARE_CODE
 #define _Q          Q16
